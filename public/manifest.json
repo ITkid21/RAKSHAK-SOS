@@ -1,0 +1,17 @@
+{
+    "name": "Secure SOS",
+    "short_name": "SOS App",
+    "description": "Emergency Assistance and Location Tracking",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#ef4444",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512"
+        }
+    ]
+}
