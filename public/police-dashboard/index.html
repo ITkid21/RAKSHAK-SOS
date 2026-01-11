@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAKSHAK DISPATCH - COMMAND CENTER</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --sidebar: #1e293b;
+            --text: #f8fafc;
+            --accent: #3b82f6;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* LOGIN OVERLAY */
+        #login-overlay {
+            position: fixed;
+            inset: 0;
+            background: #020617;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: var(--sidebar);
+            padding: 40px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.1);
+        }
+
+        input {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 12px;
+            width: 100%;
+            margin: 10px 0;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        /* LAYOUT */
+        #sidebar {
+            width: 350px;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        #main {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* SIDEBAR COMPONENTS */
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: #1e293b;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            color: #64748b;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            color: white;
+            border-bottom-color: var(--accent);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        #content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        /* ALERTS */
+        .alert-card {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .alert-card:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .alert-card.active-risk {
+            border-left: 4px solid var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .alert-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .badge-risk {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge-safe {
+            background: #22c55e;
+            color: white;
+        }
+
+        .badge-alert {
+            background: var(--accent);
+            color: white;
+        }
+
+        .timestamp {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+
+        /* GLOBAL ALARM */
+        #flash-alert {
+            position: fixed;
+            inset: 0;
+            background: rgba(239, 68, 68, 0.3);
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+            animation: flash 1s infinite;
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                opacity: 0
+            }
+
+            50% {
+                opacity: 1
+            }
+        }
+
+        /* FOOTER */
+        .footer {
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* MUTE BTN */
+        .control-panel {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            background: #334155;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 1. LOGIN OVERLAY -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <i data-lucide="shield-alert"
+                style="color: var(--accent); width: 48px; height: 48px; margin-bottom: 20px;"></i>
+            <h2 style="margin: 0 0 20px 0; font-size: 18px;">RAKSHAK DISPATCH</h2>
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 20px;">RESTRICTED ACCESS</div>
+            <input type="text" id="officer-id" placeholder="Officer ID (e.g., AD-101)" autocomplete="off">
+            <button class="btn-primary" onclick="handleLogin()">AUTHENTICATE</button>
+        </div>
+    </div>
+
+    <div id="flash-alert"></div>
+
+    <!-- 2. SIDEBAR -->
+    <div id="sidebar">
+        <div class="header">
+            <h1><i data-lucide="radio"></i> RAKSHAK</h1>
+            <div style="font-size: 10px; color: #64748b; margin-top: 5px;">UNIT: <span id="unit-id-display">--</span> |
+                STATUS: <span id="sys-status" style="color:var(--accent)">CONNECTING</span></div>
+        </div>
+
+        <div class="control-panel">
+            <button class="btn-small" onclick="toggleMute()"><i data-lucide="volume-2" id="mute-icon"></i> <span
+                    id="mute-text">ALARM ON</span></button>
+            <button class="btn-small" onclick="clearSolved()" style="background: #22c55e;"><i
+                    data-lucide="check-circle"></i> CLEAR SAFE</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('active')">ACTIVE</button>
+            <button class="tab-btn" onclick="switchTab('history')">LOGS</button>
+        </div>
+
+        <div id="content-area">
+            <!-- Dynamic Content -->
+        </div>
+
+        <div class="footer">
+            <span>SECURE CONNECTION</span>
+            <span id="clock">00:00:00</span>
+        </div>
+    </div>
+
+    <!-- 3. MAP -->
+    <div id="main">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // --- AUTH & SETUP ---
+        const loginOverlay = document.getElementById('login-overlay');
+        const unitDisplay = document.getElementById('unit-id-display');
+
+        // Check Session
+        const sessionUser = sessionStorage.getItem('rakshak_user');
+        if (sessionUser) {
+            loginOverlay.style.display = 'none';
+            unitDisplay.innerText = sessionUser;
+        }
+
+        function handleLogin() {
+            const id = document.getElementById('officer-id').value.trim();
+            if (id) {
+                sessionStorage.setItem('rakshak_user', id);
+                unitDisplay.innerText = id;
+                loginOverlay.style.display = 'none';
+                playLoginSound();
+            } else {
+                alert("OFFICER ID REQUIRED");
+            }
+        }
+
+        // --- CORE VARIABLES ---
+        const map = L.map('map').setView([19.0760, 72.8777], 11); // Mumbai (Central)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd', maxZoom: 20
+        }).addTo(map);
+
+        const contentArea = document.getElementById('content-area');
+        const sysStatus = document.getElementById('sys-status');
+        const flashAlert = document.getElementById('flash-alert');
+
+        let ws = null;
+        let markers = {};
+        let activeAlerts = {}; // Store current state of users
+        let historyLog = JSON.parse(localStorage.getItem('rakshak_history') || '[]');
+        let currentTab = 'active';
+        let isMuted = false;
+        let audioCtx = null, oscillator = null, evidenceAudio = null;
+
+        // --- ICONS (LUCIDE) ---
+        lucide.createIcons();
+
+        // --- TABS & UI RENDER ---
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+            renderSidebar();
+        }
+
+        function renderSidebar() {
+            contentArea.innerHTML = '';
+
+            if (currentTab === 'active') {
+                const keys = Object.keys(activeAlerts);
+                if (keys.length === 0) {
+                    contentArea.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">NO ACTIVE SIGNALS</div>';
+                    return;
+                }
+                keys.forEach(id => {
+                    const data = activeAlerts[id];
+                    const card = createAlertCard(data, true);
+                    contentArea.appendChild(card);
+                });
+            } else {
+                // History (Reverse Chronological)
+                if (historyLog.length === 0) {
+                    contentArea.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">LOG EMPTY</div>';
+                    return;
+                }
+                [...historyLog].reverse().forEach(data => {
+                    contentArea.appendChild(createAlertCard(data, false));
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function createAlertCard(data, isActive) {
+            const div = document.createElement('div');
+            div.className = `alert-card ${data.mode === 'RISK' || data.mode === 'PROOF' ? 'active-risk' : ''}`;
+
+            let badgeClass = 'badge-alert';
+            if (data.mode === 'RISK' || data.mode === 'PROOF') badgeClass = 'badge-risk';
+            if (data.mode === 'SAFE') badgeClass = 'badge-safe';
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <div style="font-weight:bold;">${data.id}</div>
+                    <span class="alert-badge ${badgeClass}">${data.mode}</span>
+                </div>
+                <div style="font-size:12px; color:#cbd5e1;">
+                    <i data-lucide="map-pin" style="width:12px; vertical-align:middle"></i> ${data.station || 'Locating...'}
+                </div>
+                <div class="timestamp">${new Date(data.timestamp).toLocaleTimeString()}</div>
+                ${data.mode === 'PROOF' ? '<div style="margin-top:5px; color:#f59e0b; font-size:11px;">🎤 EVIDENCE RECEIVED</div>' : ''}
+                ${isActive ? `<button onclick="focusMap('${data.id}')" style="margin-top:8px; width:100%; border:1px solid #475569; background:transparent; color:#94a3b8; cursor:pointer; padding:4px;">LOCATE</button>` : ''}
+            `;
+            return div;
+        }
+
+        function focusMap(id) {
+            if (markers[id]) {
+                const ll = markers[id].getLatLng();
+                map.flyTo(ll, 16);
+                markers[id].openPopup();
+            }
+        }
+
+        function clearSolved() {
+            // Remove SAFE alerts from active view but keep in history
+            const toRemove = Object.keys(activeAlerts).filter(id => activeAlerts[id].mode === 'SAFE');
+            toRemove.forEach(id => delete activeAlerts[id]);
+            renderSidebar();
+            stopAlarm(); // Just in case
+        }
+
+        // --- WEBSOCKET LOGIC ---
+        function connect() {
+            // Dynamic Host for LAN support
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.hostname;
+            const wsUrl = `${protocol}//${host}:8080`;
+
+            // Update UI display
+            document.querySelector('#status-container').previousElementSibling.innerHTML = `
+                Server: ${wsUrl}<br>
+                Status: <span id="connection-status">Connecting...</span>
+            `;
+
+            ws = new WebSocket(wsUrl);
+            ws.onopen = () => { sysStatus.innerText = 'ONLINE'; sysStatus.style.color = '#22c55e'; };
+            ws.onclose = () => { sysStatus.innerText = 'OFFLINE'; sysStatus.style.color = '#ef4444'; setTimeout(connect, 3000); };
+            ws.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.status === 'connected') return;
+                handleSignal(msg);
+            };
+        }
+        connect();
+
+        function handleSignal(data) {
+            const { id, mode } = data;
+
+            // 1. Update Active State
+            activeAlerts[id] = data;
+
+            // 2. Add to History (Only significant state changes to avoid spam)
+            // Log RISK, PROOF, SAFE, or Initial ALERT
+            const lastLog = historyLog.findLast(l => l.id === id);
+            if (!lastLog || lastLog.mode !== mode || (Date.now() - new Date(lastLog.timestamp).getTime() > 60000)) {
+                historyLog.push(data);
+                // Keep max 50 logs
+                if (historyLog.length > 50) historyLog.shift();
+                localStorage.setItem('rakshak_history', JSON.stringify(historyLog));
+            }
+
+            // 3. Map Marker
+            updateMarker(data);
+
+            // 4. Alarm Logic
+            if (mode === 'RISK' || mode === 'PROOF') triggerAlarm();
+            if (mode === 'PROOF' && data.audio) playEvidenceAudio(data.audio);
+            if (mode === 'SAFE') stopAlarm();
+
+            // 5. Refresh UI
+            renderSidebar();
+        }
+
+        function updateMarker(data) {
+            const { id, coords, mode } = data;
+            if (!coords) return;
+
+            const lat = parseFloat(coords.lat);
+            const lng = parseFloat(coords.lng);
+
+            let color = '#3b82f6'; let radius = 8;
+            if (mode === 'RISK') { color = '#ef4444'; radius = 15; }
+            if (mode === 'PROOF') { color = '#f59e0b'; radius = 15; }
+            if (mode === 'SAFE') { color = '#22c55e'; radius = 8; }
+
+            if (markers[id]) {
+                markers[id].setLatLng([lat, lng]).setStyle({ fillColor: color, radius: radius });
+            } else {
+                const m = L.circleMarker([lat, lng], { color: '#fff', fillColor: color, fillOpacity: 0.9, weight: 2, radius: radius }).addTo(map);
+                m.bindPopup(`<b>${id}</b><br>${mode}`);
+                markers[id] = m;
+            }
+
+            if (mode === 'RISK' || mode === 'PROOF') {
+                markers[id].bringToFront();
+                // pulse effect handled by CSS on marker node if possible, or just size change
+            }
+        }
+
+        // --- AUDIO SYSTEM ---
+        function triggerAlarm() {
+            if (isMuted) return;
+            flashAlert.style.display = 'block';
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (!oscillator) {
+                oscillator = audioCtx.createOscillator();
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.value = 800; // Hz
+                // Siren LFO
+                const lfo = audioCtx.createOscillator();
+                lfo.frequency.value = 2; // 2Hz siren
+                const gain = audioCtx.createGain();
+                gain.gain.value = 600;
+                lfo.connect(gain).connect(oscillator.frequency);
+                lfo.start();
+
+                oscillator.connect(audioCtx.destination);
+                oscillator.start();
+            }
+        }
+
+        function stopAlarm() {
+            flashAlert.style.display = 'none';
+            if (oscillator) { oscillator.stop(); oscillator = null; }
+            if (evidenceAudio) { evidenceAudio.pause(); }
+        }
+
+        function playEvidenceAudio(base64) {
+            if (isMuted) return;
+            if (evidenceAudio) evidenceAudio.pause();
+            evidenceAudio = new Audio(base64);
+            evidenceAudio.play();
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const btn = document.getElementById('mute-icon');
+            const txt = document.getElementById('mute-text');
+            if (isMuted) {
+                activeAlerts = {}; // Also silence visual? No, just audio.
+                stopAlarm();
+                btn.setAttribute('data-lucide', 'volume-x');
+                txt.innerText = 'MUTED';
+                document.querySelector('.control-panel button').style.opacity = '0.5';
+            } else {
+                btn.setAttribute('data-lucide', 'volume-2');
+                txt.innerText = 'ALARM ON';
+                document.querySelector('.control-panel button').style.opacity = '1';
+            }
+            lucide.createIcons();
+        }
+
+        function playLoginSound() {
+            // Simple beep
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.frequency.value = 600;
+            osc.connect(ctx.destination);
+            osc.start();
+            setTimeout(() => osc.stop(), 200);
+        }
+
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+    </script>
+</body>
+
+</html>
